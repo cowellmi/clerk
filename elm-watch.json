@@ -1,0 +1,11 @@
+{
+    "serve": "public",
+    "targets": {
+        "clerk": {
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "public/main.js"
+        }
+    }
+}

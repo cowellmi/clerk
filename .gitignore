@@ -1,0 +1,7 @@
+node_modules/
+elm-stuff/
+public/main.js
+.wrangler
+.dev.vars
+/data/
+/clerk

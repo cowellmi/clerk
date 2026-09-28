@@ -1,0 +1,842 @@
+/*
+ * ============================================================
+ * GLOBAL
+ * ============================================================
+ */
+
+/* Atkinson Hyperlegible Next (Braille Institute, SIL OFL 1.1), variable
+   weight, self-hosted from @fontsource-variable 5.3.0 so it works offline and
+   needs no third-party origin. Latin and Latin Extended subsets. */
+@font-face {
+    font-family: "Atkinson Hyperlegible Next";
+    font-style: normal;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url("fonts/atkinson-hyperlegible-next-latin-ext-wght-normal.woff2") format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+    font-family: "Atkinson Hyperlegible Next";
+    font-style: italic;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url("fonts/atkinson-hyperlegible-next-latin-ext-wght-italic.woff2") format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+    font-family: "Atkinson Hyperlegible Next";
+    font-style: normal;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url("fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "Atkinson Hyperlegible Next";
+    font-style: italic;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url("fonts/atkinson-hyperlegible-next-latin-wght-italic.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+    color-scheme: light dark;
+    /* sans-serif covers the moment before the font loads and any script it
+       lacks; the emoji fonts draw the chat box's cooking emoji. */
+    --font: "Atkinson Hyperlegible Next", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    --text: black;
+    --text-muted: gray;
+    --background: white;
+    --border: lightgray;
+    /* Text fields: a recessed surface, a border at 3:1+ against both it and
+       the page, and a placeholder at 4.5:1+ on the surface. */
+    --field: #f5f5f7;
+    --field-border: #7c7c80;
+    --placeholder: #636366;
+    --bubble: #f2f2f4;
+    --shadow: rgba(0, 0, 0, 0.08);
+    --accent: blue;
+    --on-accent: white;
+    --disabled: lightgray;
+    --on-disabled: white;
+    --success: green;
+    --neutral: #636366;
+    --danger: #c62828;
+    --fork: #1f883d;
+    --error: crimson;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --text: #e8e8ea;
+        --text-muted: #9a9aa0;
+        --background: #242426;
+        --border: #3a3a3c;
+        --field: #121214;
+        --field-border: #7c7c82;
+        --placeholder: #9a9aa0;
+        --bubble: #2c2c2e;
+        --shadow: rgba(0, 0, 0, 0.5);
+        --accent: #0a84ff;
+        --on-accent: white;
+        --disabled: #3a3a3c;
+        --on-disabled: #8e8e93;
+        --success: #1f7a35;
+        --neutral: #636366;
+        --danger: #c53030;
+        --fork: #238636;
+        --error: #ff6b6b;
+    }
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* The one knob for type size: every size below is in rem, em or ch, so
+   the whole layout scales from here. A percentage keeps the reader's own
+   browser font-size setting in play. */
+html {
+    font-size: 137.5%;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overscroll-behavior: none;
+}
+
+/* Never under 16px: iOS Safari zooms in on focused fields below it. Typed
+   text is a step up in size and weight, so it reads as the user's own. */
+select {
+    font-size: 1rem;
+}
+
+input,
+textarea {
+    font-size: 1.125rem;
+    font-weight: 500;
+}
+
+/* Form controls don't inherit font-family, so they're set explicitly. */
+body,
+input,
+select,
+textarea,
+button {
+    font-family: var(--font);
+}
+
+/* What the user types or picks sits in a field that stands apart from the
+   page by surface and border, not only by color. */
+input,
+select,
+textarea {
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--field-border);
+}
+
+/* Italic as well as lighter, so a hint never passes for an entry. Firefox
+   also fades placeholders by default; the color already does that. */
+::placeholder {
+    color: var(--placeholder);
+    font-style: italic;
+    font-weight: 400;
+    opacity: 1;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+body {
+    background: var(--background);
+    color: var(--text);
+    max-width: 45rem;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+body,
+textarea {
+    line-height: 1.45;
+}
+
+h1,
+h2,
+h3 {
+    line-height: 1.2;
+}
+
+h1 {
+    margin-top: 0;
+}
+
+main {
+    padding-top: 2rem;
+}
+
+.app-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.app-nav .logo {
+    display: block;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-right: 1rem;
+}
+
+/* On the dark page the logo's tile shares the fields' surface, so it takes
+   their border and radius too. The radius is wider than the icon's own
+   corners and clips them, leaving one curve. */
+@media (prefers-color-scheme: dark) {
+    .app-nav .logo {
+        border: 1px solid var(--field-border);
+        border-radius: 0.5rem;
+    }
+}
+
+.app-nav .links {
+    font-size: 0.8125rem;
+    display: flex;
+    align-items: center;
+    gap: clamp(0.75rem, 3vw, 2.5rem);
+}
+
+.app-nav a,
+.app-nav a:visited {
+    text-align: center;
+    text-decoration: none;
+    color: var(--text-muted);
+}
+
+.app-nav a:hover {
+    color: var(--text);
+    text-decoration: underline;
+}
+
+.app-nav a.active {
+    color: var(--text);
+    font-weight: 700;
+}
+
+header.with-action-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+header.with-action-buttons> :first-child {
+    margin-top: 0;
+}
+
+.action-row {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+button.action-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.35em 0.8em;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--on-accent);
+    cursor: pointer;
+}
+
+button.action-button .icon {
+    stroke-width: 2.5;
+}
+
+button.action-button:disabled {
+    background-color: var(--disabled);
+    color: var(--on-disabled);
+    cursor: not-allowed;
+}
+
+button.action-button.primary:enabled {
+    background-color: var(--success);
+}
+
+button.action-button.neutral:enabled {
+    background-color: var(--neutral);
+}
+
+button.action-button.danger:enabled {
+    background-color: var(--danger);
+}
+
+button.action-button.fork:enabled {
+    background-color: var(--fork);
+}
+
+.icon {
+    vertical-align: middle;
+}
+
+.error {
+    color: var(--error);
+}
+
+
+
+/*
+ * ============================================================
+ * Recipe generator
+ * ============================================================
+ */
+
+.recipe-generator {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 10rem;
+}
+
+.opening-prompt {
+    position: fixed;
+    top: 43%;
+    left: 0;
+    right: 0;
+    transform: translateY(-43%);
+    margin: 0;
+    padding: 0 1rem;
+    text-align: center;
+}
+
+.opening-hint {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+
+.opening-hint.error {
+    color: var(--error);
+}
+
+.recipe-generator:has(.chat:hover) .opening-hint.error {
+    animation: shake 0.4s ease-in-out;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20%,
+    60% {
+        transform: translateX(-6px);
+    }
+
+    40%,
+    80% {
+        transform: translateX(6px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .recipe-generator:has(.chat:hover) .opening-hint.error {
+        animation: none;
+    }
+}
+
+.spinner {
+    width: 2rem;
+    height: 2rem;
+    margin: 0 auto;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spinner {
+        animation-duration: 2.4s;
+    }
+}
+
+.assistant-response {
+    align-self: center;
+    max-width: 32rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    background: var(--bubble);
+}
+
+.chat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: fixed;
+    bottom: 2rem;
+    left: 0;
+    width: 100%;
+    padding: 0 1rem;
+}
+
+.chat .container {
+    display: flex;
+    max-width: 32rem;
+    width: 100%;
+    border: 1px solid var(--field-border);
+    border-radius: 1rem;
+    background: var(--field);
+    box-shadow: 0 2px 12px var(--shadow);
+}
+
+/* The box, not the borderless textarea inside it, shows the focus ring. */
+.chat .container:has(textarea:focus-visible, a:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.chat textarea {
+    resize: none;
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 1rem 0.5rem 1rem 1rem;
+    /* One row, growing with what's typed up to four, then scrolling. Where
+       `field-sizing` isn't supported it stays one row (`rows`). */
+    field-sizing: content;
+    min-height: calc(1.45em + 2rem);
+    max-height: calc(4 * 1.45em + 2rem);
+}
+
+/* Send sits centered on the textarea's last line, so it stays put as the box
+   grows. The line is the textarea's 1.125rem × 1.45; the button is its 1.5rem
+   icon plus 0.5rem padding each side. The same inset on the right keeps it
+   square in the corner. */
+.chat .button-container {
+    --inset: calc(1rem + (1.45 * 1.125rem - 2.5rem) / 2);
+    display: flex;
+    align-self: flex-end;
+    margin: var(--inset) var(--inset) var(--inset) 0.5rem;
+}
+
+/* One row fits few words on a narrow phone, so the placeholder is cut with
+   an ellipsis rather than wrapping below the fold. */
+.chat textarea::placeholder {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat textarea:disabled {
+    cursor: not-allowed;
+}
+
+.chat button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 100%;
+    background: var(--accent);
+    color: var(--on-accent);
+    padding: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.chat button .icon {
+    stroke-width: 3;
+}
+
+/* Only where hover is real: on touch, :hover sticks after a tap. */
+@media (hover: hover) {
+    .chat button:hover {
+        filter: brightness(0.8);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .chat .not-configured {
+        transition: none;
+    }
+}
+
+.chat button:disabled {
+    background: var(--disabled);
+    cursor: not-allowed;
+    filter: none;
+}
+
+
+
+/*
+ * ============================================================
+ * Recipe details
+ * ============================================================
+ */
+
+.recipe-header> :first-child {
+    max-width: 25rem;
+}
+
+.recipe-columns li+li {
+    margin-top: 0.6em;
+}
+
+.recipe-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Editing: the title field fills the heading's width in the heading's own
+   type, so the page doesn't jump between viewing and editing. */
+.recipe-editor .recipe-header> :first-child {
+    flex: 1;
+}
+
+.recipe-editor .title-input {
+    width: 100%;
+    font: inherit;
+    padding: 0.1em 0.3em;
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.editable-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.editable-item input,
+.editable-item textarea {
+    flex: 1;
+    min-width: 0;
+    padding: 0.25em 0.5em;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1em;
+    font-weight: normal;
+    line-height: 1.45;
+}
+
+.editable-item textarea {
+    resize: none;
+    field-sizing: content;
+    /* field-sizing ignores rows, so hold three lines plus padding */
+    min-height: calc(3lh + 0.5em);
+}
+
+/* Quiet: grey, with a filled circle on hover. */
+button.item-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    flex-shrink: 0;
+    padding: 0.4rem;
+    border: none;
+    border-radius: 1rem;
+    background: none;
+    color: var(--placeholder);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+@media (hover: hover) {
+    button.item-button:hover {
+        background: var(--border);
+        color: var(--text);
+    }
+}
+
+button.item-button.add-first {
+    padding: 0.35em 0.8em;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+time {
+    font-size: 80%;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/*
+ * ============================================================
+ * Manage stock
+ * ============================================================
+ */
+
+/* Stretch body > main > .manage-stock to the viewport so the textarea can take
+   the leftover height. Its `rows` sets the flex basis, so it never shrinks
+   below 5 rows (the page scrolls instead) and only grows past that. The
+   bottom padding matches the chat box's `bottom`, so the textarea ends where
+   the chat box does on the generator. */
+body:has(.manage-stock) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    padding-bottom: 2rem;
+}
+
+body:has(.manage-stock) main,
+.manage-stock {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.manage-stock textarea {
+    flex: 1 0 auto;
+    resize: none;
+    width: 100%;
+    border-radius: 1rem;
+    padding: 1rem;
+}
+
+
+
+/*
+ * ============================================================
+ * Saved recipes
+ * ============================================================
+ */
+
+.saved-recipes h1 {
+    margin-bottom: 2rem;
+}
+
+.saved-recipes ul {
+    list-style: none;
+    padding: 0;
+}
+
+.saved-recipes li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 1rem;
+}
+
+/* The title wraps; the date keeps its full width. */
+.saved-recipes time {
+    flex-shrink: 0;
+}
+
+
+
+/*
+ * ============================================================
+ * Settings
+ * ============================================================
+ */
+
+/* Labels in a right-aligned column, so each sits right against its control. */
+.fields {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    align-items: center;
+    gap: 1rem 0.75rem;
+    margin: 0;
+}
+
+.fields dt {
+    text-align: right;
+    white-space: nowrap;
+    font-size: 1.1rem;
+}
+
+/* The control and its error share a row, the error wrapping below when
+   there's no room. */
+.fields dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    margin: 0;
+    min-width: 0;
+}
+
+.fields input,
+.fields select {
+    min-width: 0;
+    padding: 0.35em 0.6em;
+    border-radius: 0.5rem;
+}
+
+/* Without the native look, Safari honors the field's surface and border. The
+   chevron is two gradient triangles in --text, so it follows the theme; the
+   right padding keeps the label clear of it. */
+.fields select {
+    appearance: none;
+    padding-right: 2em;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--text) 50%),
+        linear-gradient(135deg, var(--text) 50%, transparent 50%);
+    background-position:
+        right 1.05em center,
+        right 0.75em center;
+    background-size: 0.3em 0.3em;
+    background-repeat: no-repeat;
+}
+
+/* Padding rather than margin, so it adds to the h2's top margin instead of
+   collapsing into it. */
+.settings section+section {
+    padding-top: 2rem;
+}
+
+/* Label and details side by side, a row each. */
+.about dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.5rem 0.75rem;
+}
+
+.about dt {
+    color: var(--text-muted);
+    text-align: right;
+}
+
+.about dd {
+    margin: 0;
+}
+
+
+
+/*
+ * ============================================================
+ * Offline status
+ * ============================================================
+ */
+
+/* Self-host only, while the server can't be reached. A short full-width bar
+   pinned to the bottom, under 2rem tall so it stays beneath the fixed chat
+   box (`bottom: 2rem`) rather than over it. White on `--danger` is 5:1 or
+   more in both themes. */
+.offline {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.2rem 1rem;
+    background: var(--danger);
+    color: white;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+}
+
+/* Room for the bar, so it never covers the end of the page. */
+body:has(.offline) {
+    padding-bottom: 2.5rem;
+}
+
+/* Where the chat box sits while offline, as above. */
+body:has(.manage-stock):has(.offline) {
+    padding-bottom: 2rem;
+}
+
+/*
+ * ============================================================
+ * Mobile
+ * ============================================================
+ */
+
+@media (max-width: 800px) {
+
+    /* Less than the wide 137.5%: any bigger and the nav overflows a 360px
+       phone. */
+    html {
+        font-size: 115%;
+    }
+
+    body {
+        font-size: 1rem;
+    }
+
+    h1 {
+        font-size: 1.5em;
+    }
+
+    /* Pinned below body size: any bigger and the nav overflows a 360px
+       phone. */
+    .app-nav .links {
+        font-size: 0.875rem;
+    }
+
+    .opening-prompt {
+        top: 45%;
+        transform: translateY(-45%);
+    }
+
+    .action-row {
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    /* Save above Clear once the row stacks. */
+    .recipe-generator .action-row .action-button.primary {
+        order: -1;
+    }
+
+    /* Recipes */
+
+    .recipe-columns {
+        display: block;
+    }
+
+    /* Stacked, each heading starts a new block, so it gets more room above
+       than the default 1em. */
+    .recipe-columns h3 {
+        margin-top: 1.75em;
+    }
+
+
+    /* Closer to the bottom edge, to give the page more room, with the sides
+       matching. Back up while offline, so the chat box stays clear of the bar
+       under it. */
+    .chat {
+        bottom: 0.75rem;
+        padding: 0 0.75rem;
+    }
+
+    body:has(.offline) .chat {
+        bottom: 2rem;
+    }
+
+    body:has(.manage-stock) {
+        padding-bottom: 0.75rem;
+    }
+}

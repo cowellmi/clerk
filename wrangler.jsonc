@@ -1,0 +1,18 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "clerk",
+	"compatibility_date": "2026-09-24",
+	"build": {
+		"command": "npm run build"
+	},
+	"assets": {
+		"directory": "public"
+	},
+	"routes": [
+		{
+			"pattern": "clerk.cowell.dev",
+			"custom_domain": true
+		}
+	],
+	"workers_dev": false
+}
