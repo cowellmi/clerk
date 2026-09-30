@@ -1330,7 +1330,7 @@ viewNoProvider : String -> Html Msg
 viewNoProvider className =
     p [ class className ]
         [ strong [] [ text "No LLM provider" ]
-        , text ": setup an LLM provider in the "
+        , text ": set one up in the "
         , a [ href (Route.toFragment Route.Settings) ] [ text "Settings" ]
         ]
 
