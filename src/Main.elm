@@ -45,6 +45,7 @@ main =
 
 type alias Model =
     { navKey : Nav.Key
+    , origin : String -- this page's, e.g. "https://clerk.cowell.dev"
     , route : Route
     , timezone : Time.Zone
     , settings : SettingsEditor
@@ -225,6 +226,7 @@ init flags url key =
         ( model, routeCmd ) =
             routeTo (Route.fromUrl url)
                 { navKey = key
+                , origin = originOf url
                 , route = Route.Create
                 , timezone = Time.utc
                 , settings = { saved = Result.toMaybe (Settings.parse loaded.settings), form = loaded.settings }
@@ -259,6 +261,28 @@ init flags url key =
     ( model
     , Cmd.batch [ loadCmd, routeCmd, Server.checkHealth GotHealth, Task.perform GotTimezone Time.here ]
     )
+
+
+{-| As `window.location.origin` gives it: no trailing slash, and the port only
+when the URL names one.
+-}
+originOf : Url.Url -> String
+originOf url =
+    (case url.protocol of
+        Url.Http ->
+            "http://"
+
+        Url.Https ->
+            "https://"
+    )
+        ++ url.host
+        ++ (case url.port_ of
+                Just number ->
+                    ":" ++ String.fromInt number
+
+                Nothing ->
+                    ""
+           )
 
 
 routeTo : Route -> Model -> ( Model, Cmd Msg )
@@ -1263,7 +1287,7 @@ viewMain model =
                 viewRecipeDetails model id
 
             ( _, Route.Settings ) ->
-                viewSettings model.settings
+                viewSettings model.origin model.settings
 
             -- this is an invalid state and should never occur
             ( _, Route.NotFound ) ->
@@ -1730,8 +1754,8 @@ viewRecipeListItem item =
     li [] [ text item ]
 
 
-viewSettings : SettingsEditor -> Html Msg
-viewSettings settings =
+viewSettings : String -> SettingsEditor -> Html Msg
+viewSettings origin settings =
     let
         form =
             settings.form
@@ -1751,7 +1775,7 @@ viewSettings settings =
                         (List.map (viewProviderOption form.provider) Settings.allProviderKinds)
                     )
                     (Ok ())
-                    ++ viewProviderFields form
+                    ++ viewProviderFields origin form
                 )
             ]
         , viewAbout
@@ -1800,10 +1824,11 @@ viewExternalLink url label =
 
 
 {-| The selected provider's own fields, one row each. DeepSeek's base URL is
-fixed, so it isn't shown.
+fixed, so it isn't shown. Ollama gets a hint row: the browser calls it
+directly, so it has to allow this page's origin (CORS).
 -}
-viewProviderFields : Settings.Form -> List (Html Msg)
-viewProviderFields form =
+viewProviderFields : String -> Settings.Form -> List (Html Msg)
+viewProviderFields origin form =
     List.concat <|
         case form.provider of
             Settings.DeepSeekKind ->
@@ -1824,6 +1849,14 @@ viewProviderFields form =
                         []
                     )
                     (Settings.parseBaseUrl form.ollama.baseUrl)
+                , [ dt [] []
+                  , dd [ class "field-hint" ]
+                        [ viewExternalLink "https://docs.ollama.com/faq#how-can-i-allow-additional-web-origins-to-access-ollama"
+                            "Ollama has to allow this web origin:"
+                        , text " "
+                        , code [] [ text ("OLLAMA_ORIGINS=" ++ origin) ]
+                        ]
+                  ]
                 , viewField "model"
                     "Model"
                     (input

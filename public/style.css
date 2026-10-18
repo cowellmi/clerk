@@ -693,6 +693,16 @@ body:has(.manage-stock) main,
     border-radius: 0.5rem;
 }
 
+/* A note under the field above it, muted so it doesn't read as a field. The
+row gap is halved back off so it stays with that field. */
+.fields dd.field-hint {
+    display: block;
+    margin-top: -0.5rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+}
+
 /* Without the native look, Safari honors the field's surface and border. The
    chevron is two gradient triangles in --text, so it follows the theme; the
    right padding keeps the label clear of it. */
