@@ -14,7 +14,7 @@ import (
 
 const id = "2026-09-16T14-05-33-chicken-and-rice-bowl"
 
-const recipeJSON = `{"id":"` + id + `","title":"Chicken and Rice Bowl","ingredients":["1 cup rice"],"steps":["Cook the rice."],"createdAt":1789567533000,"updatedAt":1789567533000,"forkedFrom":null}`
+const recipeJSON = `{"id":"` + id + `","title":"Chicken and Rice Bowl","ingredients":["1 cup rice"],"steps":["Cook the rice."],"createdAt":1789567533000,"updatedAt":1789567533000}`
 
 func newServer(t *testing.T) (*httptest.Server, string) {
 	t.Helper()
@@ -113,7 +113,7 @@ func TestRecipeLifecycle(t *testing.T) {
 	var got, want Recipe
 	json.Unmarshal([]byte(body), &got)
 	json.Unmarshal([]byte(recipeJSON), &want)
-	if got.Title != want.Title || got.ForkedFrom != nil || len(got.Steps) != 1 {
+	if got.Title != want.Title || len(got.Steps) != 1 {
 		t.Fatalf("got %+v, want %+v", got, want)
 	}
 
@@ -148,7 +148,7 @@ func TestRejectsBadRecipes(t *testing.T) {
 	cases := map[string]string{
 		"bad id":        strings.Replace(recipeJSON, id, "../../etc/passwd", 1),
 		"missing steps": strings.Replace(recipeJSON, `"steps":["Cook the rice."],`, "", 1),
-		"unknown field": strings.Replace(recipeJSON, `"forkedFrom":null`, `"forkedFrom":null,"response":"hi"`, 1),
+		"unknown field": strings.Replace(recipeJSON, `}`, `,"response":"hi"}`, 1),
 		"not json":      "rice",
 		"two values":    recipeJSON + recipeJSON,
 	}

@@ -1,4 +1,4 @@
-module SavedRecipe exposing (ForkOrigin, SavedRecipe, encode, encodeForkOrigin, encodeList, forkOrigin, forkOriginDecoder, listDecoder, new, slug)
+module SavedRecipe exposing (SavedRecipe, encode, encodeList, listDecoder, new, slug)
 
 {-| A recipe the user saved, as stored in localStorage (`clerk.recipes`).
 -}
@@ -15,36 +15,18 @@ type alias SavedRecipe =
     , recipe : Recipe
     , createdAt : Time.Posix
     , updatedAt : Time.Posix
-    , forkedFrom : Maybe ForkOrigin
     }
 
 
-{-| A snapshot of the recipe this one was forked from, not a reference: the
-original may since have been deleted.
+{-| A newly saved recipe.
 -}
-type alias ForkOrigin =
-    { id : String
-    , title : String
-    }
-
-
-{-| A newly saved recipe, and what it was forked from, if anything.
--}
-new : Time.Posix -> Maybe ForkOrigin -> Recipe -> SavedRecipe
-new now forkedFrom recipe =
+new : Time.Posix -> Recipe -> SavedRecipe
+new now recipe =
     { id = TimeFormat.sortableUtc now ++ "-" ++ slug recipe.title
     , recipe = recipe
     , createdAt = now
     , updatedAt = now
-    , forkedFrom = forkedFrom
     }
-
-
-{-| The origin a fork of this recipe records: its id and current title.
--}
-forkOrigin : SavedRecipe -> ForkOrigin
-forkOrigin saved =
-    { id = saved.id, title = saved.recipe.title }
 
 
 {-| Lowercase, with each run of characters other than a-z and 0-9 collapsed to
@@ -105,8 +87,8 @@ listDecoder =
 
 
 {-| Flat, one object per recipe: `id`, `title`, `ingredients`, `steps`,
-`createdAt` and `updatedAt` (Unix milliseconds), and `forkedFrom`
-(`{ id, title }` or `null`). The same shape as a Connected-mode recipe file.
+and `createdAt` and `updatedAt` (Unix milliseconds). The same shape as a
+Connected-mode recipe file.
 -}
 encodeList : List SavedRecipe -> E.Value
 encodeList =
@@ -115,29 +97,11 @@ encodeList =
 
 decoder : D.Decoder SavedRecipe
 decoder =
-    D.map5 SavedRecipe
+    D.map4 SavedRecipe
         (D.field "id" D.string)
         Recipe.decoder
         (D.field "createdAt" (D.map Time.millisToPosix D.int))
         (D.field "updatedAt" (D.map Time.millisToPosix D.int))
-        (D.field "forkedFrom" (D.nullable forkOriginDecoder))
-
-
-{-| `{ id, title }`.
--}
-forkOriginDecoder : D.Decoder ForkOrigin
-forkOriginDecoder =
-    D.map2 ForkOrigin
-        (D.field "id" D.string)
-        (D.field "title" D.string)
-
-
-encodeForkOrigin : ForkOrigin -> E.Value
-encodeForkOrigin origin =
-    E.object
-        [ ( "id", E.string origin.id )
-        , ( "title", E.string origin.title )
-        ]
 
 
 encode : SavedRecipe -> E.Value
@@ -147,13 +111,5 @@ encode saved =
             :: Recipe.encodeFields saved.recipe
             ++ [ ( "createdAt", E.int (Time.posixToMillis saved.createdAt) )
                , ( "updatedAt", E.int (Time.posixToMillis saved.updatedAt) )
-               , ( "forkedFrom"
-                 , case saved.forkedFrom of
-                    Just origin ->
-                        encodeForkOrigin origin
-
-                    Nothing ->
-                        E.null
-                 )
                ]
         )

@@ -59,7 +59,6 @@ type alias Model =
     , requestState : RequestState
     , activeRecipe : Maybe Recipe
     , assistantResponse : Maybe String -- the model's note about `activeRecipe`
-    , forkedFrom : Maybe SavedRecipe.ForkOrigin -- the saved recipe `activeRecipe` was forked from
     , savedRecipes : List SavedRecipe -- localStorage (`clerk.recipes`) or the server, oldest first
     , recipeEdit : Maybe RecipeEdit -- a saved recipe in edit mode on its page
     , pendingConfirm : Maybe Confirmable -- waiting on the browser's confirm dialog
@@ -219,7 +218,7 @@ init flags url key =
                     ( stored, Cmd.none )
 
                 Err err ->
-                    ( { stock = "", settings = Settings.emptyForm, recipes = [], generated = Nothing, forkedFrom = Nothing, serverKnown = False }
+                    ( { stock = "", settings = Settings.emptyForm, recipes = [], generated = Nothing, serverKnown = False }
                     , logError ("Decode err: " ++ D.errorToString err)
                     )
 
@@ -252,7 +251,6 @@ init flags url key =
                                 else
                                     Just response
                             )
-                , forkedFrom = loaded.forkedFrom
                 , savedRecipes = loaded.recipes
                 , recipeEdit = Nothing
                 , pendingConfirm = Nothing
@@ -375,18 +373,18 @@ update msg model =
                 ( { model | connection = ServerUnreachable }, Cmd.none )
 
             else
-                -- origins deleted before pruning on delete existed
-                dropMissingForkOrigins { model | connection = Disconnected }
+                ( { model | connection = Disconnected }, Cmd.none )
 
         GotServerData result ->
             case result of
                 Ok data ->
-                    dropMissingForkOrigins
-                        { model
-                            | connection = Connected
-                            , stock = Draft.init data.stock
-                            , savedRecipes = data.recipes
-                        }
+                    ( { model
+                        | connection = Connected
+                        , stock = Draft.init data.stock
+                        , savedRecipes = data.recipes
+                      }
+                    , Cmd.none
+                    )
 
                 Err message ->
                     ( { model | connection = LoadFailed message }, Cmd.none )
@@ -578,7 +576,7 @@ update msg model =
         GotSaveTime now ->
             case model.activeRecipe of
                 Just recipe ->
-                    startWrite (WriteNewRecipe (SavedRecipe.new now model.forkedFrom recipe)) model
+                    startWrite (WriteNewRecipe (SavedRecipe.new now recipe)) model
 
                 Nothing ->
                     ( model, Cmd.none )
@@ -789,7 +787,7 @@ runConfirmed action model =
         ClearGenerator ->
             let
                 cleared =
-                    { model | activeRecipe = Nothing, assistantResponse = Nothing, forkedFrom = Nothing }
+                    { model | activeRecipe = Nothing, assistantResponse = Nothing }
             in
             ( cleared, persistGenerated cleared )
 
@@ -804,7 +802,7 @@ runConfirmed action model =
 
 
 {-| Opens a copy of the saved recipe in the generator, to change with prompts
-and save as a new recipe that records where it came from. Replaces whatever
+and save as a new recipe. Replaces whatever
 the generator held, including a generation in progress (its reply is ignored).
 -}
 forkRecipe : String -> Model -> ( Model, Cmd Msg )
@@ -816,7 +814,6 @@ forkRecipe id model =
                     { model
                         | activeRecipe = Just saved.recipe
                         , assistantResponse = Nothing
-                        , forkedFrom = Just (SavedRecipe.forkOrigin saved)
                         , requestState = Idle
                     }
             in
@@ -912,7 +909,7 @@ applyWrite write model =
             if model.activeRecipe == Just saved.recipe then
                 let
                     cleared =
-                        { withSaved | activeRecipe = Nothing, assistantResponse = Nothing, forkedFrom = Nothing }
+                        { withSaved | activeRecipe = Nothing, assistantResponse = Nothing }
                 in
                 ( cleared
                 , Cmd.batch
@@ -960,22 +957,13 @@ applyWrite write model =
             ( { model | savedRecipes = savedRecipes, recipeEdit = recipeEdit }, Cmd.none )
 
         WriteDelete id ->
-            let
-                ( pruned, pruneCmd ) =
-                    dropMissingForkOrigins
-                        { model | savedRecipes = List.filter (\saved -> saved.id /= id) model.savedRecipes }
-            in
-            ( pruned
-            , Cmd.batch
-                [ pruneCmd
+            ( { model | savedRecipes = List.filter (\saved -> saved.id /= id) model.savedRecipes }
+              -- replace, so Back doesn't return to the deleted recipe's page
+            , if model.route == Route.Recipe id then
+                Nav.replaceUrl model.navKey (Route.toFragment Route.Saved)
 
-                -- replace, so Back doesn't return to the deleted recipe's page
-                , if model.route == Route.Recipe id then
-                    Nav.replaceUrl model.navKey (Route.toFragment Route.Saved)
-
-                  else
-                    Cmd.none
-                ]
+              else
+                Cmd.none
             )
 
 
@@ -997,52 +985,8 @@ writePage write =
             Route.Recipe id
 
 
-{-| Forgets fork origins, saved and in the generator, whose recipe no longer
-exists: a deleted recipe isn't coming back. Stores whatever changed, except
-recipes on the server, which keep theirs until next saved (the page hides a
-missing origin either way).
--}
-dropMissingForkOrigins : Model -> ( Model, Cmd Msg )
-dropMissingForkOrigins model =
-    let
-        exists origin =
-            findSavedRecipe origin.id model.savedRecipes /= Nothing
-
-        keepExisting forkedFrom =
-            Maybe.andThen
-                (\origin ->
-                    if exists origin then
-                        Just origin
-
-                    else
-                        Nothing
-                )
-                forkedFrom
-
-        savedRecipes =
-            List.map (\saved -> { saved | forkedFrom = keepExisting saved.forkedFrom }) model.savedRecipes
-
-        pruned =
-            { model | savedRecipes = savedRecipes, forkedFrom = keepExisting model.forkedFrom }
-    in
-    ( pruned
-    , Cmd.batch
-        [ if savedRecipes /= model.savedRecipes && model.connection == Disconnected then
-            saveRecipes (SavedRecipe.encodeList savedRecipes)
-
-          else
-            Cmd.none
-        , if pruned.forkedFrom /= model.forkedFrom then
-            persistGenerated pruned
-
-          else
-            Cmd.none
-        ]
-    )
-
-
-{-| Stores the recipe on the generator page, with the model's note and what it
-was forked from, so it survives a reload. `null` when there's none.
+{-| Stores the recipe on the generator page, with the model's note, so it
+survives a reload. `null` when there's none.
 -}
 persistGenerated : Model -> Cmd Msg
 persistGenerated model =
@@ -1051,12 +995,7 @@ persistGenerated model =
             Just recipe ->
                 E.object
                     (Recipe.encodeFields recipe
-                        ++ [ ( "response", E.string (Maybe.withDefault "" model.assistantResponse) )
-                           , ( "forkedFrom"
-                             , Maybe.map SavedRecipe.encodeForkOrigin model.forkedFrom
-                                |> Maybe.withDefault E.null
-                             )
-                           ]
+                        ++ [ ( "response", E.string (Maybe.withDefault "" model.assistantResponse) ) ]
                     )
 
             Nothing ->
@@ -1311,7 +1250,7 @@ viewRecipeGenerator model =
                         [ viewActionButton { kind = Neutral, icon = Icons.eraser, label = "Clear", msg = AskConfirm ClearGenerator } []
                         , viewSaveButton SaveActiveRecipe (model.pendingWrite == Nothing)
                         ]
-                    , details = [ viewForkedFrom model.savedRecipes model.forkedFrom, viewWriteError model ]
+                    , details = [ viewWriteError model ]
                     }
                     recipe
 
@@ -1484,9 +1423,8 @@ viewSavedRecipeItem timezone saved =
         ]
 
 
-{-| A saved recipe's page: the recipe, when it was saved and updated, and what
-it was forked from. An unknown id (deleted, or a stale link) gets a message
-rather than an error.
+{-| A saved recipe's page: the recipe and when it was saved and updated. An
+unknown id (deleted, or a stale link) gets a message rather than an error.
 -}
 viewRecipeDetails : Model -> String -> Html Msg
 viewRecipeDetails model id =
@@ -1495,7 +1433,6 @@ viewRecipeDetails model id =
             let
                 details =
                     [ viewDate model.timezone saved.updatedAt
-                    , viewForkedFrom model.savedRecipes saved.forkedFrom
                     , viewWriteError model
                     ]
 
@@ -1571,22 +1508,6 @@ findSavedRecipe id savedRecipes =
         |> List.head
 
 
-{-| A link to the recipe it was forked from. Nothing if it wasn't forked or
-the original no longer exists.
--}
-viewForkedFrom : List SavedRecipe -> Maybe SavedRecipe.ForkOrigin -> Html Msg
-viewForkedFrom savedRecipes forkedFrom =
-    case forkedFrom |> Maybe.andThen (\origin -> findSavedRecipe origin.id savedRecipes |> Maybe.map (always origin)) of
-        Just origin ->
-            p [ class "recipe-meta" ]
-                [ text "Forked from "
-                , a [ href (Route.toFragment (Route.Recipe origin.id)) ] [ text origin.title ]
-                ]
-
-        Nothing ->
-            text ""
-
-
 {-| A date in the user's time zone, as `<time datetime="YYYY-MM-DD">`.
 -}
 viewDate : Time.Zone -> Time.Posix -> Html Msg
@@ -1600,7 +1521,7 @@ viewDate timezone posix =
 
 {-| A recipe: its title in the top left and its action row in the top right
 (`viewHeader` with `recipe-header`, which limits the title's width), optional
-details (on a saved recipe's page, the saved date and fork origin), then
+details (on a saved recipe's page, the saved date), then
 ingredients and steps.
 -}
 viewRecipe :
@@ -2059,14 +1980,13 @@ type alias Flags =
     , settings : Settings.Form
     , recipes : List SavedRecipe
     , generated : Maybe Recipe.Generated
-    , forkedFrom : Maybe SavedRecipe.ForkOrigin -- the generated recipe's
     , serverKnown : Bool
     }
 
 
 flagsDecoder : D.Decoder Flags
 flagsDecoder =
-    D.map6 Flags
+    D.map5 Flags
         (D.field "stock" (D.nullable D.string)
             |> D.map (Maybe.withDefault "")
         )
@@ -2079,5 +1999,4 @@ flagsDecoder =
         -- lenient: a stored recipe that doesn't decode just means an empty
         -- generator page
         (D.maybe (D.field "generated" Recipe.generatedDecoder))
-        (D.maybe (D.at [ "generated", "forkedFrom" ] SavedRecipe.forkOriginDecoder))
         (D.field "serverKnown" D.bool)

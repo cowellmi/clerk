@@ -17,20 +17,12 @@ import (
 // localStorage (`clerk.recipes`, see SavedRecipe.elm). Timestamps are Unix
 // milliseconds.
 type Recipe struct {
-	ID          string      `json:"id"`
-	Title       string      `json:"title"`
-	Ingredients []string    `json:"ingredients"`
-	Steps       []string    `json:"steps"`
-	CreatedAt   int64       `json:"createdAt"`
-	UpdatedAt   int64       `json:"updatedAt"`
-	ForkedFrom  *ForkOrigin `json:"forkedFrom"`
-}
-
-// ForkOrigin is a snapshot of the recipe another was forked from, not a
-// reference: the original may since have been deleted.
-type ForkOrigin struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Ingredients []string `json:"ingredients"`
+	Steps       []string `json:"steps"`
+	CreatedAt   int64    `json:"createdAt"`
+	UpdatedAt   int64    `json:"updatedAt"`
 }
 
 var (
