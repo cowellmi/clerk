@@ -693,14 +693,26 @@ body:has(.manage-stock) main,
     border-radius: 0.5rem;
 }
 
-/* A note under the field above it, muted so it doesn't read as a field. The
-row gap is halved back off so it stays with that field. */
-.fields dd.field-hint {
-    display: block;
-    margin-top: -0.5rem;
+/* A note beside its control, muted so it doesn't read as a field, text above
+   code. Zero height, its lines overflowing evenly above and below, so it can
+   be taller than the control without making the row taller than every other
+   provider's. It wraps its own lines into the room left beside the control
+   rather than dropping under it, where it would cover the next row. */
+.fields dd:has(.field-hint) {
+    flex-wrap: nowrap;
+}
+
+.fields .field-hint {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1 1 auto;
+    height: 0;
+    min-width: 0;
     color: var(--text-muted);
-    font-size: 0.9rem;
-    overflow-wrap: anywhere;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    overflow-wrap: break-word;
 }
 
 /* Without the native look, Safari honors the field's surface and border. The
@@ -848,5 +860,28 @@ body:has(.manage-stock):has(.offline) {
 
     body:has(.manage-stock) {
         padding-bottom: 0.75rem;
+    }
+}
+
+/* Below full width (45rem at the wide 137.5%), there's too little room beside
+   a control for its hint. */
+@media (max-width: 1000px) {
+
+    /* So the hint goes under its control, taking its own height. The label
+       lines up with the control's text, not the middle of the control and
+       hint together. */
+    .fields dt:has(+ dd .field-hint),
+    .fields dd:has(.field-hint) {
+        align-self: baseline;
+    }
+
+    .fields dd:has(.field-hint) {
+        flex-wrap: wrap;
+    }
+
+    .fields .field-hint {
+        flex-basis: 100%;
+        height: auto;
+        font-size: 0.9rem;
     }
 }

@@ -1745,8 +1745,8 @@ viewExternalLink url label =
 
 
 {-| The selected provider's own fields, one row each. DeepSeek's base URL is
-fixed, so it isn't shown. Ollama gets a hint row: the browser calls it
-directly, so it has to allow this page's origin (CORS).
+fixed, so it isn't shown. Ollama's base URL gets a hint beside it: the
+browser calls it directly, so it has to allow this page's origin (CORS).
 -}
 viewProviderFields : String -> Settings.Form -> List (Html Msg)
 viewProviderFields origin form =
@@ -1758,25 +1758,24 @@ viewProviderFields origin form =
                 ]
 
             Settings.OllamaKind ->
-                [ viewField "base-url"
-                    "Base URL"
-                    (input
-                        [ id "base-url"
-                        , type_ "url"
-                        , placeholder Settings.ollamaDefaultBaseUrl
-                        , value form.ollama.baseUrl
-                        , onInput OllamaBaseUrlInput
-                        ]
-                        []
-                    )
-                    (Settings.parseBaseUrl form.ollama.baseUrl)
-                , [ dt [] []
-                  , dd [ class "field-hint" ]
-                        [ viewExternalLink "https://docs.ollama.com/faq#how-can-i-allow-additional-web-origins-to-access-ollama"
-                            "Ollama has to allow this web origin:"
-                        , text " "
-                        , code [] [ text ("OLLAMA_ORIGINS=" ++ origin) ]
-                        ]
+                [ [ dt [] [ Html.label [ for "base-url" ] [ text "Base URL" ] ]
+                  , dd []
+                        (input
+                            [ id "base-url"
+                            , type_ "url"
+                            , placeholder Settings.ollamaDefaultBaseUrl
+                            , value form.ollama.baseUrl
+                            , onInput OllamaBaseUrlInput
+                            ]
+                            []
+                            :: viewFieldError (Settings.parseBaseUrl form.ollama.baseUrl)
+                            ++ [ span [ class "field-hint" ]
+                                    [ viewExternalLink "https://docs.ollama.com/faq#how-can-i-allow-additional-web-origins-to-access-ollama"
+                                        "Ollama has to allow this web origin:"
+                                    , code [] [ text "OLLAMA_ORIGINS=", node "wbr" [] [], text origin ]
+                                    ]
+                               ]
+                        )
                   ]
                 , viewField "model"
                     "Model"
