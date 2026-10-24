@@ -321,6 +321,8 @@ type Msg
     | StartFork String -- saved recipe id
     | StartEdit String -- saved recipe id
     | EditTitle String
+    | EditPrepMinutes String
+    | EditCookMinutes String
     | EditItem RecipeList Int String
     | InsertItem RecipeList Int -- a new empty item at this index
     | RemoveItem RecipeList Int
@@ -520,6 +522,12 @@ update msg model =
 
         EditTitle title ->
             ( editRecipe (\recipe -> { recipe | title = title }) model, Cmd.none )
+
+        EditPrepMinutes minutes ->
+            ( editRecipe (\recipe -> { recipe | prepMinutes = parseMinutes minutes }) model, Cmd.none )
+
+        EditCookMinutes minutes ->
+            ( editRecipe (\recipe -> { recipe | cookMinutes = parseMinutes minutes }) model, Cmd.none )
 
         EditItem list index value ->
             ( editRecipeList list
@@ -1036,10 +1044,27 @@ cleanRecipe recipe =
         cleanList =
             List.map String.trim >> List.filter (not << String.isEmpty)
     in
-    { title = String.trim recipe.title
-    , ingredients = cleanList recipe.ingredients
-    , steps = cleanList recipe.steps
+    { recipe
+        | title = String.trim recipe.title
+        , ingredients = cleanList recipe.ingredients
+        , steps = cleanList recipe.steps
     }
+
+
+{-| A time field's minutes. Blank, or anything that isn't a whole number of
+minutes, means unknown.
+-}
+parseMinutes : String -> Maybe Int
+parseMinutes str =
+    String.toInt (String.trim str)
+        |> Maybe.andThen
+            (\minutes ->
+                if minutes >= 0 then
+                    Just minutes
+
+                else
+                    Nothing
+            )
 
 
 setApiKey : String -> { a | apiKey : String } -> { a | apiKey : String }
@@ -1521,7 +1546,7 @@ viewDate timezone posix =
 
 {-| A recipe: its title in the top left and its action row in the top right
 (`viewHeader` with `recipe-header`, which limits the title's width), optional
-details (on a saved recipe's page, the saved date), then
+details (on a saved recipe's page, the saved date), the estimated times, then
 ingredients and steps.
 -}
 viewRecipe :
@@ -1535,7 +1560,8 @@ viewRecipe { actions, details } recipe =
         []
         (viewHeader [ "recipe-header" ] (h1 [] [ text recipe.title ]) actions
             :: details
-            ++ [ div
+            ++ [ viewTimes recipe
+               , div
                     [ class "recipe-columns" ]
                     [ viewIngredients recipe.ingredients
                     , viewSteps recipe.steps
@@ -1569,7 +1595,11 @@ viewRecipeEditor { actions, details } recipe =
             )
             actions
             :: details
-            ++ [ div
+            ++ [ div [ class "recipe-times" ]
+                    [ viewMinutesInput "prep-minutes" "Prep" EditPrepMinutes recipe.prepMinutes
+                    , viewMinutesInput "cook-minutes" "Cook" EditCookMinutes recipe.cookMinutes
+                    ]
+               , div
                     [ class "recipe-columns" ]
                     [ div []
                         [ h3 [] [ text "Ingredients" ]
@@ -1582,6 +1612,23 @@ viewRecipeEditor { actions, details } recipe =
                     ]
                ]
         )
+
+
+viewMinutesInput : String -> String -> (String -> Msg) -> Maybe Int -> Html Msg
+viewMinutesInput fieldId label toMsg minutes =
+    Html.label [ for fieldId ]
+        [ text label
+        , input
+            [ id fieldId
+            , type_ "number"
+            , Html.Attributes.min "0"
+            , step "5"
+            , value (Maybe.withDefault "" (Maybe.map String.fromInt minutes))
+            , onInput toMsg
+            ]
+            []
+        , text "min"
+        ]
 
 
 viewEditableList : RecipeList -> (List (Attribute Msg) -> List (Html Msg) -> Html Msg) -> List String -> Html Msg
@@ -1650,6 +1697,50 @@ itemName list =
 itemId : RecipeList -> Int -> String
 itemId list index =
     itemName list ++ "-" ++ String.fromInt index
+
+
+{-| The estimated prep and cook times, each left out when it's unknown or none
+(a dish that isn't cooked has a cook time of 0), then their total, rounded up
+to 5 minutes, when there are both.
+-}
+viewTimes : Recipe -> Html Msg
+viewTimes recipe =
+    let
+        known =
+            Maybe.andThen
+                (\m ->
+                    if m > 0 then
+                        Just m
+
+                    else
+                        Nothing
+                )
+
+        viewTime label minutes =
+            span [] [ text (label ++ " "), strong [] [ text minutes ] ]
+
+        total =
+            Maybe.map2 (\prep cook -> viewTime "Total" ("~" ++ Recipe.formatMinutes (roundUpTo 5 (prep + cook))))
+                (known recipe.prepMinutes)
+                (known recipe.cookMinutes)
+    in
+    case
+        List.filterMap identity
+            [ Maybe.map (viewTime "Prep" << Recipe.formatMinutes) (known recipe.prepMinutes)
+            , Maybe.map (viewTime "Cook" << Recipe.formatMinutes) (known recipe.cookMinutes)
+            , total
+            ]
+    of
+        [] ->
+            text ""
+
+        times ->
+            p [ class "recipe-times" ] times
+
+
+roundUpTo : Int -> Int -> Int
+roundUpTo multiple n =
+    ((n + multiple - 1) // multiple) * multiple
 
 
 viewIngredients : List String -> Html Msg

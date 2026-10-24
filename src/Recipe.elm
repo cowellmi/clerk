@@ -1,4 +1,4 @@
-module Recipe exposing (Generated, Recipe, correction, decodeGenerated, decoder, encodeFields, generatedDecoder, systemPrompt, userMessage)
+module Recipe exposing (Generated, Recipe, correction, decodeGenerated, decoder, encodeFields, formatMinutes, generatedDecoder, systemPrompt, userMessage)
 
 {-| A recipe, and how to ask an LLM for one.
 -}
@@ -9,6 +9,8 @@ import Json.Encode as E
 
 type alias Recipe =
     { title : String
+    , prepMinutes : Maybe Int -- estimated; Nothing for recipes saved before times existed
+    , cookMinutes : Maybe Int
     , ingredients : List String
     , steps : List String
     }
@@ -43,12 +45,14 @@ outputFormat =
     String.join "\n"
         [ "Reply with a single json object and nothing else: no code fences, no text before or after it. Use exactly these keys, in this order:"
         , "- \"title\": a short recipe name."
+        , "- \"prepMinutes\": your estimate of the hands-on prep time (chopping, mixing, and so on) in whole minutes, as a number."
+        , "- \"cookMinutes\": your estimate of the cooking time (on the stove, in the oven, and so on) in whole minutes, as a number. Use 0 for a dish that isn't cooked."
         , "- \"ingredients\": an array of strings, one ingredient each, with its quantity."
         , "- \"steps\": an array of strings, one step each, in order, without numbering."
         , "- \"response\": 2-5 sentences of plain text (no markdown) to the user about this recipe: what you made or changed, and anything they should know, such as substitutions or ingredients not in their stock."
         , ""
         , "Example:"
-        , "{\"title\": \"Garlic Butter Chicken and Rice\", \"ingredients\": [\"2 chicken thighs\", \"1 cup jasmine rice\", \"3 cloves garlic, minced\", \"2 tbsp butter\", \"Salt and black pepper, to taste\"], \"steps\": [\"Rinse the rice, then simmer it covered in 1.5 cups water for 15 minutes.\", \"Season the chicken with salt and pepper.\", \"Sear the chicken in 1 tbsp butter over medium-high heat, 5-6 minutes per side, until cooked through.\", \"Lower the heat, add the remaining butter and the garlic, and cook for 1 minute, spooning the butter over the chicken.\", \"Slice the chicken and serve it over the rice with the pan butter.\"], \"response\": \"This uses the chicken and rice from your stock, with a quick garlic butter pan sauce. Thighs stay juicier than breasts here, but breasts work if you cut the cook time by a couple of minutes. You'll need butter, which wasn't on your stock list.\"}"
+        , "{\"title\": \"Garlic Butter Chicken and Rice\", \"prepMinutes\": 10, \"cookMinutes\": 25, \"ingredients\": [\"2 chicken thighs\", \"1 cup jasmine rice\", \"3 cloves garlic, minced\", \"2 tbsp butter\", \"Salt and black pepper, to taste\"], \"steps\": [\"Rinse the rice, then simmer it covered in 1.5 cups water for 15 minutes.\", \"Season the chicken with salt and pepper.\", \"Sear the chicken in 1 tbsp butter over medium-high heat, 5-6 minutes per side, until cooked through.\", \"Lower the heat, add the remaining butter and the garlic, and cook for 1 minute, spooning the butter over the chicken.\", \"Slice the chicken and serve it over the rice with the pan butter.\"], \"response\": \"This uses the chicken and rice from your stock, with a quick garlic butter pan sauce. Thighs stay juicier than breasts here, but breasts work if you cut the cook time by a couple of minutes. You'll need butter, which wasn't on your stock list.\"}"
         ]
 
 
@@ -85,6 +89,8 @@ userMessage { stock, request, currentRecipe } =
                         ++ String.join "\n"
                             (List.filterMap identity
                                 [ Just ("Title: " ++ recipe.title)
+                                , Maybe.map (\minutes -> "Prep time: " ++ formatMinutes minutes) recipe.prepMinutes
+                                , Maybe.map (\minutes -> "Cook time: " ++ formatMinutes minutes) recipe.cookMinutes
                                 , nonEmptySection "Ingredients" recipe.ingredients
                                 , nonEmptySection "Steps" recipe.steps
                                 ]
@@ -133,7 +139,7 @@ decodeGenerated content =
         json ->
             D.decodeString generatedDecoder json
                 |> Result.mapError
-                    (\_ -> "it wasn't a single json object with exactly the keys title, ingredients, steps and response")
+                    (\_ -> "it wasn't a single json object with exactly the keys title, prepMinutes, cookMinutes, ingredients, steps and response")
 
 
 generatedDecoder : D.Decoder Generated
@@ -143,23 +149,67 @@ generatedDecoder =
         (D.field "response" D.string)
 
 
+{-| The times are optional: recipes saved before them have none, and a reply
+that leaves them out (or gets them wrong) is still worth showing.
+-}
 decoder : D.Decoder Recipe
 decoder =
-    D.map3 Recipe
+    D.map5 Recipe
         (D.field "title" D.string)
+        (optionalMinutes "prepMinutes")
+        (optionalMinutes "cookMinutes")
         (D.field "ingredients" (D.list D.string))
         (D.field "steps" (D.list D.string))
 
 
-{-| `title`, `ingredients` and `steps`, the fields `decoder` reads. Returned as
-a list so callers can add their own fields to the same object.
+optionalMinutes : String -> D.Decoder (Maybe Int)
+optionalMinutes key =
+    D.maybe (D.field key D.float)
+        |> D.map
+            (Maybe.andThen
+                (\minutes ->
+                    if minutes >= 0 then
+                        Just (round minutes)
+
+                    else
+                        Nothing
+                )
+            )
+
+
+{-| The fields `decoder` reads, leaving out a time that isn't known. Returned
+as a list so callers can add their own fields to the same object.
 -}
 encodeFields : Recipe -> List ( String, E.Value )
 encodeFields recipe =
-    [ ( "title", E.string recipe.title )
-    , ( "ingredients", E.list E.string recipe.ingredients )
-    , ( "steps", E.list E.string recipe.steps )
-    ]
+    List.filterMap identity
+        [ Just ( "title", E.string recipe.title )
+        , Maybe.map (\minutes -> ( "prepMinutes", E.int minutes )) recipe.prepMinutes
+        , Maybe.map (\minutes -> ( "cookMinutes", E.int minutes )) recipe.cookMinutes
+        , Just ( "ingredients", E.list E.string recipe.ingredients )
+        , Just ( "steps", E.list E.string recipe.steps )
+        ]
+
+
+{-| Like "45m", "1h" or "1h 15m".
+-}
+formatMinutes : Int -> String
+formatMinutes minutes =
+    let
+        hours =
+            minutes // 60
+
+        rest =
+            modBy 60 minutes
+    in
+    if hours == 0 then
+        String.fromInt rest ++ "m"
+
+    else if rest == 0 then
+        String.fromInt hours ++ "h"
+
+    else
+        String.fromInt hours ++ "h " ++ String.fromInt rest ++ "m"
 
 
 {-| Removes a code fence around the reply: three backticks and an optional

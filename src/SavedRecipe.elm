@@ -86,8 +86,9 @@ listDecoder =
         |> D.map (List.filterMap identity)
 
 
-{-| Flat, one object per recipe: `id`, `title`, `ingredients`, `steps`,
-and `createdAt` and `updatedAt` (Unix milliseconds). The same shape as a
+{-| Flat, one object per recipe: `id`, `title`, `prepMinutes` and
+`cookMinutes` (when known), `ingredients`, `steps`, and `createdAt` and
+`updatedAt` (Unix milliseconds). The same shape as a
 Connected-mode recipe file.
 -}
 encodeList : List SavedRecipe -> E.Value

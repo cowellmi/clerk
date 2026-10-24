@@ -15,10 +15,12 @@ import (
 
 // Recipe is a saved recipe, in the same flat shape the frontend stores in
 // localStorage (`clerk.recipes`, see SavedRecipe.elm). Timestamps are Unix
-// milliseconds.
+// milliseconds. The estimated times are left out when unknown.
 type Recipe struct {
 	ID          string   `json:"id"`
 	Title       string   `json:"title"`
+	PrepMinutes *int     `json:"prepMinutes,omitempty"`
+	CookMinutes *int     `json:"cookMinutes,omitempty"`
 	Ingredients []string `json:"ingredients"`
 	Steps       []string `json:"steps"`
 	CreatedAt   int64    `json:"createdAt"`
@@ -45,6 +47,10 @@ func (r Recipe) Validate() error {
 	switch {
 	case !ValidID(r.ID):
 		return fmt.Errorf("invalid id %q", r.ID)
+	case r.PrepMinutes != nil && *r.PrepMinutes < 0:
+		return errors.New("negative prepMinutes")
+	case r.CookMinutes != nil && *r.CookMinutes < 0:
+		return errors.New("negative cookMinutes")
 	case r.Ingredients == nil:
 		return errors.New("missing ingredients")
 	case r.Steps == nil:

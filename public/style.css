@@ -516,6 +516,35 @@ button.action-button.fork:enabled {
     gap: 1rem;
 }
 
+.recipe-times {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.25rem;
+    color: var(--text-muted);
+}
+
+.recipe-times strong {
+    color: var(--text);
+}
+
+.recipe-editor .recipe-times {
+    margin: 1em 0;
+}
+
+.recipe-editor .recipe-times label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+}
+
+.recipe-editor .recipe-times input {
+    width: 5em;
+    padding: 0.25em 0.5em;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1em;
+}
+
 /* Editing: the title field fills the heading's width in the heading's own
    type, so the page doesn't jump between viewing and editing. */
 .recipe-editor .recipe-header> :first-child {
