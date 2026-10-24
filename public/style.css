@@ -516,19 +516,24 @@ button.action-button.fork:enabled {
     gap: 1rem;
 }
 
+.recipe-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 1.25rem;
+    margin-bottom: 1em;
+}
+
 .recipe-times {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem 1.25rem;
+    margin: 0 0 0 auto;
     color: var(--text-muted);
 }
 
 .recipe-times strong {
     color: var(--text);
-}
-
-.recipe-editor .recipe-times {
-    margin: 1em 0;
 }
 
 .recipe-editor .recipe-times label {

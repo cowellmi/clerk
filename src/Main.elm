@@ -1275,6 +1275,7 @@ viewRecipeGenerator model =
                         [ viewActionButton { kind = Neutral, icon = Icons.eraser, label = "Clear", msg = AskConfirm ClearGenerator } []
                         , viewSaveButton SaveActiveRecipe (model.pendingWrite == Nothing)
                         ]
+                    , date = Nothing
                     , details = [ viewWriteError model ]
                     }
                     recipe
@@ -1456,10 +1457,11 @@ viewRecipeDetails model id =
     case findSavedRecipe id model.savedRecipes of
         Just saved ->
             let
+                date =
+                    viewDate model.timezone saved.updatedAt
+
                 details =
-                    [ viewDate model.timezone saved.updatedAt
-                    , viewWriteError model
-                    ]
+                    [ viewWriteError model ]
 
                 writing =
                     model.pendingWrite /= Nothing
@@ -1475,15 +1477,16 @@ viewRecipeDetails model id =
                                     [ viewSaveButton SaveEdit (canSaveEdit edit && not writing)
                                     , viewActionButton { kind = Neutral, icon = Icons.undo, label = "Discard", msg = StartDiscard } []
                                     ]
+                                , date = date
                                 , details = details
                                 }
                                 edit.draft.draft
 
                         else
-                            viewSavedRecipe details writing saved
+                            viewSavedRecipe date details writing saved
 
                     Nothing ->
-                        viewSavedRecipe details writing saved
+                        viewSavedRecipe date details writing saved
                 ]
 
         Nothing ->
@@ -1498,14 +1501,15 @@ viewRecipeDetails model id =
                 ]
 
 
-viewSavedRecipe : List (Html Msg) -> Bool -> SavedRecipe -> Html Msg
-viewSavedRecipe details writing saved =
+viewSavedRecipe : Html Msg -> List (Html Msg) -> Bool -> SavedRecipe -> Html Msg
+viewSavedRecipe date details writing saved =
     viewRecipe
         { actions =
             [ viewActionButton { kind = Fork, icon = Icons.gitFork, label = "Fork", msg = StartFork saved.id } []
             , viewActionButton { kind = Neutral, icon = Icons.pencil, label = "Edit", msg = StartEdit saved.id } []
             , viewActionButton { kind = Danger, icon = Icons.trash, label = "Delete", msg = AskConfirm (DeleteRecipe saved.id) } [ disabled writing ]
             ]
+        , date = Just date
         , details = details
         }
         saved.recipe
@@ -1545,23 +1549,30 @@ viewDate timezone posix =
 
 
 {-| A recipe: its title in the top left and its action row in the top right
-(`viewHeader` with `recipe-header`, which limits the title's width), optional
-details (on a saved recipe's page, the saved date), the estimated times, then
-ingredients and steps.
+(`viewHeader` with `recipe-header`, which limits the title's width), then a
+row with the saved date (on a saved recipe's page) on the left and the
+estimated times on the right, optional details, then ingredients and steps.
 -}
 viewRecipe :
     { actions : List (Html Msg) -- the action row below the title
-    , details : List (Html Msg) -- shown under the title
+    , date : Maybe (Html Msg)
+    , details : List (Html Msg) -- shown under the date and times
     }
     -> Recipe
     -> Html Msg
-viewRecipe { actions, details } recipe =
+viewRecipe { actions, date, details } recipe =
     div
         []
         (viewHeader [ "recipe-header" ] (h1 [] [ text recipe.title ]) actions
+            :: (case List.filterMap identity [ date, viewTimes recipe ] of
+                    [] ->
+                        text ""
+
+                    meta ->
+                        div [ class "recipe-meta" ] meta
+               )
             :: details
-            ++ [ viewTimes recipe
-               , div
+            ++ [ div
                     [ class "recipe-columns" ]
                     [ viewIngredients recipe.ingredients
                     , viewSteps recipe.steps
@@ -1575,11 +1586,12 @@ step, which can be removed or have a new one added below it.
 -}
 viewRecipeEditor :
     { actions : List (Html Msg)
+    , date : Html Msg
     , details : List (Html Msg)
     }
     -> Recipe
     -> Html Msg
-viewRecipeEditor { actions, details } recipe =
+viewRecipeEditor { actions, date, details } recipe =
     div
         [ class "recipe-editor" ]
         (viewHeader [ "recipe-header" ]
@@ -1594,12 +1606,15 @@ viewRecipeEditor { actions, details } recipe =
                 ]
             )
             actions
-            :: details
-            ++ [ div [ class "recipe-times" ]
+            :: div [ class "recipe-meta" ]
+                [ date
+                , div [ class "recipe-times" ]
                     [ viewMinutesInput "prep-minutes" "Prep" EditPrepMinutes recipe.prepMinutes
                     , viewMinutesInput "cook-minutes" "Cook" EditCookMinutes recipe.cookMinutes
                     ]
-               , div
+                ]
+            :: details
+            ++ [ div
                     [ class "recipe-columns" ]
                     [ div []
                         [ h3 [] [ text "Ingredients" ]
@@ -1703,7 +1718,7 @@ itemId list index =
 (a dish that isn't cooked has a cook time of 0), then their total, rounded up
 to 5 minutes, when there are both.
 -}
-viewTimes : Recipe -> Html Msg
+viewTimes : Recipe -> Maybe (Html Msg)
 viewTimes recipe =
     let
         known =
@@ -1732,10 +1747,10 @@ viewTimes recipe =
             ]
     of
         [] ->
-            text ""
+            Nothing
 
         times ->
-            p [ class "recipe-times" ] times
+            Just (p [ class "recipe-times" ] times)
 
 
 roundUpTo : Int -> Int -> Int
