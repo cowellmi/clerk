@@ -1,0 +1,11 @@
+.git
+.claude
+.wrangler
+.DS_Store
+node_modules
+elm-stuff
+data
+issues
+.dev.vars
+clerk
+public/main.js
